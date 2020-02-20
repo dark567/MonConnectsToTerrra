@@ -20,7 +20,30 @@ namespace WindowsFormsApp
         public MainForm()
         {
             InitializeComponent();
+
+            this.Load += new EventHandler(Form1_Load);
+
             StatusLable();
+        }
+
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            LicensyaCheck();
+        }
+
+        private void LicensyaCheck()
+        {
+            string curFile = @"keyfile.dat";
+            if (!File.Exists(curFile)) Close();
+
+            CryptoClass crypto = new CryptoClass();
+            // if (!crypto.Form_LoadTrue()) Close();
+
+            string date = crypto.GetDecodeKey(curFile).Substring(crypto.GetDecodeKey("keyfile.dat").IndexOf("|") + 1);
+
+            if (DateTime.Parse(date).AddDays(1) <= DateTime.Now) Close();
+
+            this.Text = this.Text + "......." + date;
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -144,12 +167,10 @@ namespace WindowsFormsApp
             fb_con.ServerType = 0; //указываем тип сервера (0 - "полноценный Firebird" (classic или super server), 1 - встроенный (embedded))
             fb = new FbConnection(fb_con.ToString()); //передаем нашу строку подключения объекту класса FbConnection
 
-            Properties.Settings s = new Properties.Settings();
+            MonConnectsToTerra.Properties.Settings s = new MonConnectsToTerra.Properties.Settings();
 
             try
             {
-                //создаем подключение
-                //conn.Open(); //убрал пока используем ini
                 fb.Open(); //открываем БД
                 FbCommand fbcommand = fb.CreateCommand();
                 fbcommand.CommandType = CommandType.Text;
@@ -158,7 +179,6 @@ namespace WindowsFormsApp
 
                 //  MessageBox.Show(fbcommand.CommandText);
                 FbDataAdapter FBAdapter = new FbDataAdapter(fbcommand.CommandText, fbcommand.Connection);
-
 
                 DataSet fbds = new DataSet("first_tab_DS");
 
@@ -213,13 +233,17 @@ namespace WindowsFormsApp
 
             //TimeSpan diff = DateTime.Now;
             //double seconds = diff.TotalSeconds;
-            if (DateTime.Now.Second % 30 == 0) this.MainForm_Load(sender, e);
-
-
+            if (DateTime.Now.Second % 30 == 0)
+            {
+                this.MainForm_Load(sender, e);
+                LicensyaCheck();
+            }
         }
 
         private void dataGridView1_KeyUp(object sender, KeyEventArgs e)
         {
+            LicensyaCheck();
+
             string key = Convert.ToString(e.KeyData);
             if (key == "F5")
             {
