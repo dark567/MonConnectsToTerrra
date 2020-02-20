@@ -37,10 +37,7 @@ namespace WindowsFormsApp
             if (!File.Exists(curFile)) Close();
 
             CryptoClass crypto = new CryptoClass();
-            // if (!crypto.Form_LoadTrue()) Close();
-
             string date = crypto.GetDecodeKey(curFile).Substring(crypto.GetDecodeKey("keyfile.dat").IndexOf("|") + 1);
-
             if (DateTime.Parse(date).AddDays(1) <= DateTime.Now) Close();
 
             this.Text = this.Text + "......." + date;
