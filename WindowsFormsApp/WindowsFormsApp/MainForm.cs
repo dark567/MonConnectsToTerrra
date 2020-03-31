@@ -214,10 +214,13 @@ namespace WindowsFormsApp
 
         private void OnUserNameMessage(string path_db)
         {
-            if (string.IsNullOrEmpty(path_db))
-                this.Text = "MonConnections";
-            else
-                this.Text = "MonConnections - (" + path_db + ")";
+            int indexOfSubstring = this.Text.IndexOf("!");
+
+            if (indexOfSubstring < 0)
+                if (string.IsNullOrEmpty(path_db))
+                    this.Text = "MonConnections";
+                else
+                    this.Text = "MonConnections - (" + path_db + ")";
         }
 
         private void StatusLable()
@@ -448,9 +451,11 @@ namespace WindowsFormsApp
                         //sb.Append(dataGridView1.SelectedCells[i].RowIndex
                         //    .ToString());
                         //sb.Append(", Column: ");
-                        sb.Append(dataGridView1.SelectedCells[i].ColumnIndex
-                            .ToString());
+                        //sb.Append(dataGridView1.SelectedCells[i].ColumnIndex.ToString());
+
+                        //sb.Append(dataGridView1.SelectedColumns[dataGridView1.SelectedCells[i].ColumnIndex].HeaderText.ToString()); //.SelectedColumns[0].HeaderText
                         sb.Append("Content: ");
+
                         sb.Append(dataGridView1[dataGridView1.SelectedCells[i].ColumnIndex, dataGridView1.SelectedCells[i].RowIndex].Value);
                         sb.Append(Environment.NewLine);
 
@@ -460,14 +465,28 @@ namespace WindowsFormsApp
 
                     //sb.Append("Total: " + selectedCellCount.ToString());
 
-                    MessageBox.Show(sb.ToString(), "Selected Cells");
-                }
+                    //MessageBox.Show(sb.ToString(), "Selected Cells");
 
-                //MessageBox.Show($"Close {dateParam}, {idParam}");
+                    if (!string.IsNullOrEmpty(idParam))
+                    {
+                        string message = $"Are you sure that you would like to close this connection? {sb.ToString()}";
+                        const string caption = "Connect Closing";
+                        var result = MessageBox.Show(message, caption,
+                                                     MessageBoxButtons.YesNo,
+                                                     MessageBoxIcon.Question);
 
-                if (!string.IsNullOrEmpty(idParam))
-                {
-                    CloseConnection(idParam);
+                        // If the no button was pressed ...
+                        if (result == DialogResult.Yes)
+                        {
+                            CloseConnection(idParam);
+                            this.MainForm_Load(sender, e);
+                        }
+
+                        if (result == DialogResult.No)
+                        {
+                            this.MainForm_Load(sender, e);
+                        }
+                    }
                 }
             }
 
@@ -487,7 +506,7 @@ namespace WindowsFormsApp
             {
                 int count = SelectSQL.ExecuteNonQuery();
                 //MessageBox.Show(SelectSQL.CommandText);
-                MessageBox.Show($"Del {count}");
+                MessageBox.Show($"Close successful:{count}");
                 fbt.Commit();
             }
             catch (Exception ex)
