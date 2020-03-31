@@ -3,6 +3,7 @@ using System;
 using System.Data;
 using System.Drawing;
 using System.IO;
+using System.Text;
 using System.Windows.Forms;
 
 namespace WindowsFormsApp
@@ -16,6 +17,7 @@ namespace WindowsFormsApp
         ToolStripLabel timelabel;
         ToolStripLabel typelabel;
         Timer timer;
+        Boolean AdminMode = false;
 
         public MainForm()
         {
@@ -38,9 +40,24 @@ namespace WindowsFormsApp
 
             CryptoClass crypto = new CryptoClass();
             string date = crypto.GetDecodeKey(curFile).Substring(crypto.GetDecodeKey("keyfile.dat").IndexOf("|") + 1);
-            if (DateTime.Parse(date).AddDays(1) <= DateTime.Now) Close();
+            if (DateTime.Parse(date).AddDays(1) <= DateTime.Now)
+                try
+                {
+                    if (File.Exists(curFile))
+                        File.Delete(curFile);
+                }
+                catch (IOException) { }
+                finally
+                { Close(); }
 
-            this.Text = this.Text + "......." + date;
+            int indexOfSubstring = this.Text.IndexOf(date);
+
+            if (indexOfSubstring < 0)
+                this.Text = this.Text + "......." + date;
+
+
+
+
         }
 
         private void MainForm_Load(object sender, EventArgs e)
@@ -109,7 +126,7 @@ namespace WindowsFormsApp
                                             "DATE_TIME as \"Date Time\", " +
                                             //"CURRENT_CONNECTION,"+
                                             "(select MON$REMOTE_ADDRESS from mon$attachments where MON$ATTACHMENT_ID = SS.\"CURRENT_CONNECTION\") as \"REMOTE ADDRESS\"," +
-                                            //"USER_ID,"+
+                                            "USER_ID," +
                                             "(select Login from sec_users where ID = SS.\"USER_ID\")," +
                                             //"EMPLOYEE_ID, "+
                                             "(select CODE_NAME from dic_employee where ID = SS.\"EMPLOYEE_ID\") as \"CODE NAME\"" +
@@ -157,7 +174,7 @@ namespace WindowsFormsApp
         private DataSet Test(string Command)
         {
             FbConnectionStringBuilder fb_con = new FbConnectionStringBuilder();
-            fb_con.Charset = "WIN1251"; //используемая кодировка
+            fb_con.Charset = "UTF8"; //используемая кодировка
             fb_con.UserID = "SYSDBA"; //логин
             fb_con.Password = "masterkey"; //пароль
             fb_con.Database = db_puth.Value; //путь к файлу базы данных
@@ -198,9 +215,9 @@ namespace WindowsFormsApp
         private void OnUserNameMessage(string path_db)
         {
             if (string.IsNullOrEmpty(path_db))
-                this.Text = "Монитор подключений";
+                this.Text = "MonConnections";
             else
-                this.Text = "Монитор подключений - (" + path_db + ")";
+                this.Text = "MonConnections - (" + path_db + ")";
         }
 
         private void StatusLable()
@@ -208,7 +225,7 @@ namespace WindowsFormsApp
             // toolStripStatusLabel1.Text = "Текущие дата и время";
 
             infolabel = new ToolStripLabel();
-            infolabel.Text = "Текущие дата и время:";
+            infolabel.Text = "Current date and time:";
 
             datelabel = new ToolStripLabel();
             timelabel = new ToolStripLabel();
@@ -230,16 +247,32 @@ namespace WindowsFormsApp
 
             //TimeSpan diff = DateTime.Now;
             //double seconds = diff.TotalSeconds;
-            if (DateTime.Now.Second % 30 == 0)
-            {
-                this.MainForm_Load(sender, e);
-                LicensyaCheck();
-            }
+
+            //if (DateTime.Now.Second % 30 == 0)
+            //{
+            //    this.MainForm_Load(sender, e);
+            //    LicensyaCheck();
+            //}
         }
 
         private void dataGridView1_KeyUp(object sender, KeyEventArgs e)
         {
             LicensyaCheck();
+
+            if (AdminMode)
+            {
+                int indexOfSubstring = this.Text.IndexOf("!");
+
+                if (indexOfSubstring < 0)
+                    this.Text = this.Text + "!";
+            }
+            else
+            {
+                int indexOfSubstring = this.Text.IndexOf("!");
+
+                if (indexOfSubstring > 0)
+                    this.Text = this.Text.Substring(0, this.Text.Length - 1);
+            }
 
             string key = Convert.ToString(e.KeyData);
             if (key == "F5")
@@ -259,6 +292,15 @@ namespace WindowsFormsApp
                     column.AutoSizeMode = DataGridViewAutoSizeColumnMode.NotSet;
                     //column.Width = 100;
                 }
+
+                if (column.Name == "USER_ID")
+                {
+                    if (AdminMode)
+                        column.Visible = true;
+                    else
+                        column.Visible = false;
+                }
+
             }
 
 
@@ -333,8 +375,148 @@ namespace WindowsFormsApp
 
             //            MessageBox.Show(sb.ToString(), "Selected Cells");
             //        }
+
             //    }
 
+        }
+
+        private void AdminModeToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+
+            if (AdminMode)
+            {
+                AdminMode = false;
+            }
+            else
+            {
+                AdminMode = true;
+            }
+        }
+
+        private void DataGridView1_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.ColumnIndex != -1 && e.RowIndex != -1 && e.Button == System.Windows.Forms.MouseButtons.Right)
+            {
+                DataGridViewCell c = (sender as DataGridView)[e.ColumnIndex, e.RowIndex];
+                if (!c.Selected)
+                {
+                    c.DataGridView.ClearSelection();
+                    c.DataGridView.CurrentCell = c;
+                    c.Selected = true;
+                }
+
+                if (e.Button == MouseButtons.Right)
+                {
+                    DataGridViewCell clickedCell = (sender as DataGridView).Rows[e.RowIndex].Cells[e.ColumnIndex];
+
+                    // Here you can do whatever you want with the cell
+                    this.dataGridView1.CurrentCell = clickedCell;  // Select the clicked cell, for instance
+
+                    // Get mouse position relative to the vehicles grid
+                    var relativeMousePosition = dataGridView1.PointToClient(Cursor.Position);
+
+                    // Show the context menu
+                    if (AdminMode)
+                    {
+                        this.contextMenuStrip1.Show(dataGridView1, relativeMousePosition);
+                    }
+                }
+            }
+        }
+
+        private void ToolStripMenuItem1_Click(object sender, EventArgs e)
+        {
+            string idParam = null;
+
+            Int32 selectedCellCount =
+        dataGridView1.GetCellCount(DataGridViewElementStates.Selected);
+            if (selectedCellCount > 0)
+            {
+                if (dataGridView1.AreAllCellsSelected(true))
+                {
+                    MessageBox.Show("All cells are selected", "Selected Cells");
+                }
+                else
+                {
+                    StringBuilder sb =
+                        new StringBuilder();
+
+                    for (int i = 0;
+                        i < selectedCellCount; i++)
+                    {
+                        //sb.Append("Row: ");
+                        //sb.Append(dataGridView1.SelectedCells[i].RowIndex
+                        //    .ToString());
+                        //sb.Append(", Column: ");
+                        sb.Append(dataGridView1.SelectedCells[i].ColumnIndex
+                            .ToString());
+                        sb.Append("Content: ");
+                        sb.Append(dataGridView1[dataGridView1.SelectedCells[i].ColumnIndex, dataGridView1.SelectedCells[i].RowIndex].Value);
+                        sb.Append(Environment.NewLine);
+
+                        if (dataGridView1.SelectedCells[i].ColumnIndex.ToString() == "3")
+                            idParam = dataGridView1[dataGridView1.SelectedCells[i].ColumnIndex, dataGridView1.SelectedCells[i].RowIndex].Value.ToString();
+                    }
+
+                    //sb.Append("Total: " + selectedCellCount.ToString());
+
+                    MessageBox.Show(sb.ToString(), "Selected Cells");
+                }
+
+                //MessageBox.Show($"Close {dateParam}, {idParam}");
+
+                if (!string.IsNullOrEmpty(idParam))
+                {
+                    CloseConnection(idParam);
+                }
+            }
+
+        }
+
+        private void CloseConnection(string idParam = "")
+        {
+            string fbQuery = $"delete from SYS_SESSIONS where USER_ID = cast('{idParam}' as ID) AND (IS_SERVICE_CONNECTION = 0)";
+            //MessageBox.Show(fbQuery);
+            FbConnection fb = GetConnection();
+            //fb.Open();
+            FbCommand SelectSQL = new FbCommand(fbQuery, fb);
+
+            FbTransaction fbt = fb.BeginTransaction();
+            SelectSQL.Transaction = fbt;
+            try
+            {
+                int count = SelectSQL.ExecuteNonQuery();
+                //MessageBox.Show(SelectSQL.CommandText);
+                MessageBox.Show($"Del {count}");
+                fbt.Commit();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("error" + ex.Message);
+                fbt.Rollback();
+            }
+            finally
+            {
+                SelectSQL.Dispose();
+                fb.Close();
+            }
+        }
+
+        private FbConnection GetConnection()
+        {
+            string connectionString =
+                "User=SYSDBA;" +
+                "Password=masterkey;" +
+                @"Database=" + path_db + ";" +
+                "Charset=UTF8;" +
+                "Pooling=true;" +
+                "ServerType=0;";
+
+            FbConnection conn = new FbConnection(connectionString.ToString());
+
+            conn.Open();
+
+            return conn;
         }
     }
 }
