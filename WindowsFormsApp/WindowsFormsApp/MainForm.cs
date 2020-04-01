@@ -1,4 +1,5 @@
 ﻿using FirebirdSql.Data.FirebirdClient;
+using MonConnectsToTerra;
 using System;
 using System.Data;
 using System.Drawing;
@@ -26,6 +27,28 @@ namespace WindowsFormsApp
             this.Load += new EventHandler(Form1_Load);
 
             StatusLable();
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == NativeMethods.WM_SHOWME)
+            {
+                ShowMe();
+            }
+            base.WndProc(ref m);
+        }
+        private void ShowMe()
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                WindowState = FormWindowState.Normal;
+            }
+            // get our current "TopMost" value (ours will always be false though)
+            bool top = TopMost;
+            // make our form jump to the top of everything
+            TopMost = true;
+            // set it back to whatever it was
+            TopMost = top;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -82,45 +105,8 @@ namespace WindowsFormsApp
                 MessageBox.Show("ini не прочтен" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
-            //FbConnectionStringBuilder fb_con = new FbConnectionStringBuilder();
-            //fb_con.Charset = "WIN1251"; //используемая кодировка
-            //fb_con.UserID = "SYSDBA"; //логин
-            //fb_con.Password = "masterkey"; //пароль
-            //fb_con.Database = db_puth.Value; //путь к файлу базы данных
-            //fb_con.ServerType = 0; //указываем тип сервера (0 - "полноценный Firebird" (classic или super server), 1 - встроенный (embedded))
-            //fb = new FbConnection(fb_con.ToString()); //передаем нашу строку подключения объекту класса FbConnection
-
-            //Properties.Settings s = new Properties.Settings();
-
             try
             {
-                //создаем подключение
-                //conn.Open(); //убрал пока используем ini
-                //fb.Open(); //открываем БД
-                //FbCommand fbcommand = fb.CreateCommand();
-                //fbcommand.CommandType = CommandType.Text;
-                //fbcommand.Connection = fb;
-                //fbcommand.CommandText = "select (select count(1) from SYS_SESSIONS t2 where SS.\"DATE_TIME\" >= t2.\"DATE_TIME\" and t2.IS_SERVICE_CONNECTION = 0) as N," +
-                //                            "DATE_TIME as \"Date Time\", " +
-                //                            //"CURRENT_CONNECTION,"+
-                //                            "(select MON$REMOTE_ADDRESS from mon$attachments where MON$ATTACHMENT_ID = SS.\"CURRENT_CONNECTION\") as \"REMOTE ADDRESS\"," +
-                //                            //"USER_ID,"+
-                //                            "(select Login from sec_users where ID = SS.\"USER_ID\")," +
-                //                            //"EMPLOYEE_ID, "+
-                //                            "(select CODE_NAME from dic_employee where ID = SS.\"EMPLOYEE_ID\") as \"CODE NAME\"" +
-                //                            //",IS_SERVICE_CONNECTION " +
-                //                            "from SYS_SESSIONS SS " +
-                //                            "where SS.IS_SERVICE_CONNECTION = 0" +
-                //                            "order by 1";
-
-                ////  MessageBox.Show(fbcommand.CommandText);
-                //FbDataAdapter FBAdapter = new FbDataAdapter(fbcommand.CommandText, fbcommand.Connection);
-
-
-                //DataSet fbds = new DataSet("first_tab_DS");
-
-                //FBAdapter.Fill(fbds, "dic_clients");
-
 
                 string command = "select (select count(1) from SYS_SESSIONS t2 where SS.\"DATE_TIME\" >= t2.\"DATE_TIME\" and t2.IS_SERVICE_CONNECTION = 0) as N," +
                                             "DATE_TIME as \"Date Time\", " +
@@ -506,7 +492,7 @@ namespace WindowsFormsApp
             {
                 int count = SelectSQL.ExecuteNonQuery();
                 //MessageBox.Show(SelectSQL.CommandText);
-                MessageBox.Show($"Close successful:{count}");
+                MessageBox.Show($"Close successful:{count}","Infa", MessageBoxButtons.OK, MessageBoxIcon.Question);
                 fbt.Commit();
             }
             catch (Exception ex)
@@ -536,6 +522,51 @@ namespace WindowsFormsApp
             conn.Open();
 
             return conn;
+        }
+
+        private void DataGridView1_CellMouseClick(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (!AdminMode)
+            {
+                if (e.Button == MouseButtons.Right)
+                {
+                    ContextMenu m = new ContextMenu();
+                    MenuItem Cut = new MenuItem();
+                    Cut.Text = "&Cut"; //& = Shift + C
+                    Cut.Click += new EventHandler(CutDo);
+                    m.MenuItems.Add(Cut);
+
+                    MenuItem Copy = new MenuItem();
+                    Copy.Text = "&Copy"; //& = Shift + C
+                    Copy.Click += new EventHandler(CopyDo);
+                    m.MenuItems.Add(Copy);
+
+                    MenuItem Paste = new MenuItem();
+                    Paste.Text = "&Paste"; //& = Shift + P
+                    Paste.Click += new EventHandler(PasteDo);
+                    m.MenuItems.Add(Paste);
+
+                    var relativeMousePosition = dataGridView1.PointToClient(Cursor.Position);
+
+                    m.Show(dataGridView1, relativeMousePosition);
+
+                }
+            }
+        }
+
+        private void PasteDo(object sender, EventArgs e)
+        {
+            MessageBox.Show("Paste TODO");
+        }
+
+        private void CopyDo(object sender, EventArgs e)
+        {
+            MessageBox.Show("Copy TODO");
+        }
+
+        private void CutDo(object sender, EventArgs e)
+        {
+            MessageBox.Show("Cut TODO");
         }
     }
 }
