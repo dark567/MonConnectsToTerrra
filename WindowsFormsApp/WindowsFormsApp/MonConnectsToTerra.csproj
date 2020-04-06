@@ -138,6 +138,7 @@
       <DesignTimeSharedInput>True</DesignTimeSharedInput>
     </Compile>
     <Content Include="medicine.ico" />
+    <Compile Include="Resources\Delete.bmp" />
     <Content Include="set.ini">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
